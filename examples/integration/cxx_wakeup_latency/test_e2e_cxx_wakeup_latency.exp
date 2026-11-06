@@ -1,0 +1,41 @@
+#!/usr/bin/expect
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache Software License 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0, or the MIT license
+# which is available at https://opensource.org/licenses/MIT.
+#
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+#### Common Setup
+
+set REPO_ROOT [exec git rev-parse --show-toplevel]
+cd ${REPO_ROOT}
+
+source ${REPO_ROOT}/internal/end-to-end-testing/common.exp
+source ${REPO_ROOT}/examples/integration/common.exp
+
+#### Test Setup
+
+set timeout 30
+
+# Short run: checks that all eight measurements complete, not their values.
+spawn ${BIN_DIR}/wakeup_latency --samples 5 --burst 10000
+
+#### Test Assertion
+
+expect_output "Local blocking wait, 200 ms gap    min * ns, median * ns, max * ns"
+expect_output "Local busy poll,     200 ms gap    min * ns, median * ns, max * ns"
+expect_output "Local blocking wait, back-to-back  min * ns, median * ns, max * ns"
+expect_output "Local busy poll,     back-to-back  min * ns, median * ns, max * ns"
+expect_output "Ipc   blocking wait, 200 ms gap    min * ns, median * ns, max * ns"
+expect_output "Ipc   busy poll,     200 ms gap    min * ns, median * ns, max * ns"
+expect_output "Ipc   blocking wait, back-to-back  min * ns, median * ns, max * ns"
+expect_output "Ipc   busy poll,     back-to-back  min * ns, median * ns, max * ns"
+expect_exit_success $spawn_id "wakeup_latency"
+
+show_test_passed

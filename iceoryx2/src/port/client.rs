@@ -708,14 +708,26 @@ impl<
     }
 
     fn next_request_id(&self) -> RequestId {
-        RequestId::new(
-            self.request_id_counter
-                .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |v| {
-                    Some((v + 1) % RequestId::max_value())
-                })
-                .expect("We return some, therefore the Result always contains a value."),
-        )
-        .expect("With modulo RequestId::max_value() when incrementing the request id we ensure that the value is always in bounds")
+        // Equivalent to `fetch_update` with a closure that always succeeds.
+        // `fetch_update` is deprecated since Rust 1.99 in favor of
+        // `try_update`, which is not available with the MSRV, therefore the
+        // compare-exchange loop is written out.
+        let mut current = self.request_id_counter.load(Ordering::Relaxed);
+        loop {
+            let next = (current + 1) % RequestId::max_value();
+            match self.request_id_counter.compare_exchange_weak(
+                current,
+                next,
+                Ordering::Relaxed,
+                Ordering::Relaxed,
+            ) {
+                Ok(_) => break,
+                Err(actual) => current = actual,
+            }
+        }
+
+        RequestId::new(current)
+            .expect("With modulo RequestId::max_value() when incrementing the request id we ensure that the value is always in bounds")
     }
 
     /// Returns the strategy the [`Client`] follows when a [`RequestMut`] cannot be delivered

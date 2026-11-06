@@ -1,0 +1,35 @@
+#!/usr/bin/expect
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache Software License 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0, or the MIT license
+# which is available at https://opensource.org/licenses/MIT.
+#
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+#### Common Setup
+
+set REPO_ROOT [exec git rev-parse --show-toplevel]
+cd ${REPO_ROOT}
+
+source ${REPO_ROOT}/internal/end-to-end-testing/common.exp
+source ${REPO_ROOT}/examples/integration/common.exp
+
+#### Test Setup
+
+set timeout 60
+
+# Short run: checks that the benchmark works, not how fast it is.
+spawn ${BIN_DIR}/benchmark_publish_subscribe_cxx --bench-all --iterations 100000 --payload-size 4096
+
+#### Test Assertion
+
+expect_output "iox2::ServiceType::Ipc ::: Iterations: 100000, Time: * s, Latency: * ns, Sample Size: 4096"
+expect_output "iox2::ServiceType::Local ::: Iterations: 100000, Time: * s, Latency: * ns, Sample Size: 4096"
+expect_exit_success $spawn_id "benchmark_publish_subscribe_cxx"
+
+show_test_passed

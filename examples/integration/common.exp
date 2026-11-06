@@ -1,0 +1,44 @@
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache Software License 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0, or the MIT license
+# which is available at https://opensource.org/licenses/MIT.
+#
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+# Helpers shared by the end-to-end tests of examples/integration. Source it
+# after internal/end-to-end-testing/common.exp.
+
+# Directory with the executables. scripts/run.sh sets IOX2_INTEGRATION_BIN_DIR
+# to the build of the selected profile; the default is the release build of
+# scripts/build.sh.
+if {[info exists ::env(IOX2_INTEGRATION_BIN_DIR)]} {
+    set BIN_DIR $::env(IOX2_INTEGRATION_BIN_DIR)
+} else {
+    set BIN_DIR ${REPO_ROOT}/target/examples-integration/release/bin
+}
+
+# Waits until the process of SPAWN_ID terminates and fails the test unless it
+# exited normally with exit code 0.
+proc expect_exit_success { SPAWN_ID NAME } {
+    global C_RED C_YELLOW C_OFF
+    expect {
+        -i ${SPAWN_ID} eof { }
+        -i ${SPAWN_ID} timeout {
+            puts "${C_RED}Test failed!${C_OFF}"
+            puts "${C_YELLOW}${NAME} did not terminate in time${C_OFF}"
+            exit 1
+        }
+    }
+    set status [wait -i ${SPAWN_ID}]
+    # {pid spawn_id os_error exit_code ?CHILDKILLED signal ...?}
+    if { [lindex ${status} 2] != 0 || [lindex ${status} 3] != 0 || [llength ${status}] > 4 } {
+        puts "${C_RED}Test failed!${C_OFF}"
+        puts "${C_YELLOW}${NAME} terminated abnormally:${C_OFF} ${status}"
+        exit 1
+    }
+}
